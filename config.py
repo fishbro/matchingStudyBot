@@ -15,7 +15,7 @@ admins = []
 
 user_schema = {
     "user_id": {
-        "type": "INTEGER",
+        "type": "int",
         "options": "PRIMARY KEY"
     },
     "username": {
@@ -23,18 +23,73 @@ user_schema = {
     }
 }
 
+additional_schemas = []
+checkbox_schemas = []
+
+checkboxes = {}
 questions = {}
+answers = {}
 
 with open('questions.json') as json_file:
     json_data = json.load(json_file)
     questions = json_data["questions"]
+    answers = json_data["answers"]
 
 for q in questions:
-    user_schema[q['id']] = {"type": "TEXT"}
+    if q['type'] == 'text':
+        user_schema[q['id']] = {"type": "TEXT"}
+    if q['type'] == 'radio':
+        user_schema[q['id']] = {"type": "int"}
+        answers_schema = {
+            "name": q['answers'],
+            "schema": {
+                "id": {
+                    "type": "int",
+                    "options": "PRIMARY KEY"
+                },
+                "text": {
+                    "type": "TEXT",
+                },
+            }
+        }
+        additional_schemas.append(answers_schema)
+    if q['type'] == 'checkbox':
+        if checkboxes.get(q['answers']) == None:
+            checkboxes[q['answers']] = []
 
-tables = [
-    {
-        "name": "users",
-        "schema": user_schema
-    },
-]
+        checkboxes[q['answers']].append(q['id'])
+
+for ck in checkboxes.keys():
+    additional_schema = {
+        "user_id": {
+            "type": "int",
+        },
+        ck + '_id': {
+            "type": "int",
+        }
+    }
+    answers_schema = {
+        "name": ck,
+        "schema": {
+            "id": {
+                "type": "int",
+                "options": "PRIMARY KEY"
+            }
+        }
+    }
+    for ans in checkboxes[ck]:
+        additional_schema[ans] = {
+            "type": "boolean",
+        }
+        answers_schema['schema'][ans] = {
+            "type": "TEXT",
+        }
+    additional_schemas.append({
+        "name": 'user_' + ck,
+        "schema": additional_schema
+    })
+    additional_schemas.append(answers_schema)
+
+tables = [{"name": "users", "schema": user_schema}] + additional_schemas
+
+# print(tables)
