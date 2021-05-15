@@ -44,6 +44,11 @@ def initialize_database():
                         % (table_name, ans[0], ans[1]))
 
 
+def get_answers(type):
+    return create_connection().cursor().execute("SELECT * FROM %s" %
+                                                type).fetchall()
+
+
 # def get_user(id):
 #     return create_connection().cursor().execute("SELECT * FROM user WHERE user_id=%d" % id).fetchone()
 
