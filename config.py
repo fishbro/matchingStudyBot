@@ -15,11 +15,11 @@ admins = []
 
 user_schema = {
     "user_id": {
-        "type": "int",
+        "type": "INTEGER",
         "options": "PRIMARY KEY"
     },
     "username": {
-        "type": "TEXT"
+        "type": "varchar"
     }
 }
 
@@ -37,18 +37,18 @@ with open('questions.json') as json_file:
 
 for q in questions:
     if q['type'] == 'text':
-        user_schema[q['id']] = {"type": "TEXT"}
+        user_schema[q['id']] = {"type": "varchar"}
     if q['type'] == 'radio':
-        user_schema[q['id']] = {"type": "int"}
+        user_schema[q['id']] = {"type": "INTEGER"}
         answers_schema = {
             "name": q['answers'],
             "schema": {
                 "id": {
-                    "type": "int",
-                    "options": "PRIMARY KEY"
+                    "type": "INTEGER",
+                    "options": "PRIMARY KEY AUTOINCREMENT"
                 },
                 "text": {
-                    "type": "TEXT",
+                    "type": "varchar",
                 },
             }
         }
@@ -62,18 +62,18 @@ for q in questions:
 for ck in checkboxes.keys():
     additional_schema = {
         "user_id": {
-            "type": "int",
+            "type": "INTEGER",
         },
         ck + '_id': {
-            "type": "int",
+            "type": "INTEGER",
         }
     }
     answers_schema = {
         "name": ck,
         "schema": {
             "id": {
-                "type": "int",
-                "options": "PRIMARY KEY"
+                "type": "INTEGER",
+                "options": "PRIMARY KEY AUTOINCREMENT"
             }
         }
     }
@@ -82,7 +82,7 @@ for ck in checkboxes.keys():
             "type": "boolean",
         }
         answers_schema['schema'][ans] = {
-            "type": "TEXT",
+            "type": "varchar",
         }
     additional_schemas.append({
         "name": 'user_' + ck,
