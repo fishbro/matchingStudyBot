@@ -70,14 +70,11 @@ def save_user(user_id, fields):
         skills_formated = {}
         skills_list = get_answers('skill')
         for skill in skills_list:
-            skills_formated[str(skill[0])] = {
-                'can_help': False,
-                'need_help': False
-            }
+            skills_formated[str(skill[0])] = {'can_help': 0, 'need_help': 0}
 
         for can, values in user_skills.items():
             for value in values:
-                skills_formated[value][can] = True
+                skills_formated[value][can] = 1
 
         for id, conditions in skills_formated.items():
             create_connection().cursor().execute(
@@ -95,14 +92,11 @@ def save_user(user_id, fields):
         skills_formated = {}
         skills_list = get_answers('skill')
         for skill in skills_list:
-            skills_formated[str(skill[0])] = {
-                'can_help': False,
-                'need_help': False
-            }
+            skills_formated[str(skill[0])] = {'can_help': 0, 'need_help': 0}
 
         for can, values in user_skills.items():
             for value in values:
-                skills_formated[value][can] = True
+                skills_formated[value][can] = 1
 
         for id, conditions in skills_formated.items():
             create_connection().cursor().execute(
