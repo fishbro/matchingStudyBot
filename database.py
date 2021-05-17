@@ -49,6 +49,74 @@ def get_answers(type):
                                                 type).fetchall()
 
 
+def save_user(user_id, fields):
+    user = get_user(user_id)
+    user_fields = {
+        k: v
+        for k, v in fields.items() if k != "can_help" and k != "need_help"
+    }
+    user_skills = {
+        k: v
+        for k, v in fields.items() if k == "can_help" or k == "need_help"
+    }
+
+    if user == None:
+        create_connection().cursor().execute(
+            "INSERT INTO users (user_id,%s) VALUES (%d,%s)" %
+            (",".join(key for key, value in user_fields.items()), user_id,
+             ",".join('"' + str(value) + '"'
+                      for key, value in user_fields.items())))
+
+        skills_formated = {}
+        skills_list = get_answers('skill')
+        for skill in skills_list:
+            skills_formated[str(skill[0])] = {
+                'can_help': False,
+                'need_help': False
+            }
+
+        for can, values in user_skills.items():
+            for value in values:
+                skills_formated[value][can] = True
+
+        for id, conditions in skills_formated.items():
+            create_connection().cursor().execute(
+                "INSERT INTO user_skill (user_id,skill_id,%s) VALUES (%d,%s,%s)"
+                % (",".join(key
+                            for key, value in conditions.items()), user_id, id,
+                   ",".join(str(value) for key, value in conditions.items())))
+        print('user created')
+    else:
+        create_connection().cursor().execute(
+            "UPDATE users SET %s WHERE user_id=%d" %
+            (",".join(key + '="' + str(value) + '"'
+                      for key, value in user_fields.items()), user_id))
+
+        skills_formated = {}
+        skills_list = get_answers('skill')
+        for skill in skills_list:
+            skills_formated[str(skill[0])] = {
+                'can_help': False,
+                'need_help': False
+            }
+
+        for can, values in user_skills.items():
+            for value in values:
+                skills_formated[value][can] = True
+
+        for id, conditions in skills_formated.items():
+            create_connection().cursor().execute(
+                "UPDATE user_skill SET %s WHERE user_id=%d and skill_id=%s" %
+                (",".join(key + '="' + str(value) + '"'
+                          for key, value in conditions.items()), user_id, id))
+        print('user saved')
+
+
+def get_user(user_id):
+    return create_connection().cursor().execute(
+        "SELECT * FROM users WHERE user_id=%d" % user_id).fetchone()
+
+
 # def get_user(id):
 #     return create_connection().cursor().execute("SELECT * FROM user WHERE user_id=%d" % id).fetchone()
 

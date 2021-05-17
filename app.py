@@ -3,7 +3,7 @@ import logging
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton, Update
 from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHandler, Filters, CallbackContext, CallbackQueryHandler
 # from config import questions, answers
-from database import get_answers
+from database import get_answers, save_user
 
 import config
 # from dispatches import dispatches
@@ -37,7 +37,7 @@ if __name__ == "__main__":
 
     def relationship(update: Update, _: CallbackContext):
         user = update.message.from_user
-        user_data[user["id"]]["phone"] = update.message.text
+        user_data[user["id"]]["phone_number"] = update.message.text
 
         if answers_data.get('relationship_goal') is None:
             answers_data['relationship_goal'] = get_answers(
@@ -61,7 +61,7 @@ if __name__ == "__main__":
         user = query.from_user
         data = query.data.split(',')
 
-        user_data[user["id"]]["relationship"] = data[1]
+        user_data[user["id"]]["relationship_goal"] = data[1]
         query.answer()
 
         if answers_data.get('work_scope') is None:
@@ -89,7 +89,7 @@ if __name__ == "__main__":
         user = query.from_user
         data = query.data.split(',')
 
-        user_data[user["id"]]["relationship"] = data[1]
+        user_data[user["id"]]["current_work_scope"] = data[1]
         query.answer()
 
         query.message.reply_text('Введите вашу текущую профессию и должность')
@@ -270,7 +270,7 @@ if __name__ == "__main__":
 
         query.message.reply_text("Спасибо за заполнение анкеты")
 
-        print(user_data[user['id']])
+        save_user(user['id'], user_data[user['id']])
 
         return ConversationHandler.END
 
