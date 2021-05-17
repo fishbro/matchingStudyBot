@@ -210,6 +210,8 @@ if __name__ == "__main__":
             InlineKeyboardButton(key[0], callback_data='skill,' + str(key[0]))
             for key in answers_data['skill']
         ]]
+        reply_keyboard.append(
+            [InlineKeyboardButton("Отправить", callback_data='confirm')])
         questions_message = "\n".join(
             str(question[0]) + '. ' + question[2]
             for question in answers_data['skill'])
@@ -271,12 +273,15 @@ if __name__ == "__main__":
         query.message.reply_text("Спасибо за заполнение анкеты")
 
         save_user(user['id'], user_data[user['id']])
+        user_data.pop(user['id'], None)
 
         return ConversationHandler.END
 
     def cancel(update: Update, _: CallbackContext):
         user = update.message.from_user
-        update.message.reply_text('Bye')
+        update.message.reply_text('Заполнение анкеты отменено')
+
+        user_data.pop(user['id'], None)
 
         return ConversationHandler.END
 
@@ -285,7 +290,10 @@ if __name__ == "__main__":
         # CommandHandler("stop", stop),
         # CallbackQueryHandler(button),
         ConversationHandler(
-            entry_points=[CommandHandler('start', start)],
+            entry_points=[
+                CommandHandler('start', start),
+                CommandHandler('renew', start)
+            ],
             states={
                 PHONE:
                 [MessageHandler(Filters.text & ~Filters.command, phone)],
