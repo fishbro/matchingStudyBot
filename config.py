@@ -23,6 +23,29 @@ user_schema = {
     }
 }
 
+shown_schema = {
+    "user_id": {
+        "type": "INTEGER",
+        "options": "PRIMARY KEY"
+    },
+    "shown_id": {
+        "type": "INTEGER",
+    }
+}
+
+approve_schema = {
+    "user_id": {
+        "type": "INTEGER",
+        "options": "PRIMARY KEY"
+    },
+    "confirming_id": {
+        "type": "INTEGER",
+    },
+    "is_confirmed": {
+        "type": "boolean",
+    }
+}
+
 additional_schemas = []
 checkbox_schemas = []
 
@@ -90,6 +113,15 @@ for ck in checkboxes.keys():
     })
     additional_schemas.append(answers_schema)
 
-tables = [{"name": "users", "schema": user_schema}] + additional_schemas
+tables = [{
+    "name": "users",
+    "schema": user_schema
+}, {
+    "name": "shown",
+    "schema": shown_schema
+}, {
+    "name": "approve",
+    "schema": approve_schema
+}] + additional_schemas
 
 # print(tables)

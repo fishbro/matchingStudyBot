@@ -49,8 +49,11 @@ def get_answers(type):
                                                 type).fetchall()
 
 
-def save_user(user_id, fields):
-    user = get_user(user_id)
+def save_user(user_raw, fields):
+    user = get_user(user_raw['id'])
+    username = user_raw['username']
+    user_id = user_raw['id']
+
     user_fields = {
         k: v
         for k, v in fields.items() if k != "can_help" and k != "need_help"
@@ -62,10 +65,10 @@ def save_user(user_id, fields):
 
     if user == None:
         create_connection().cursor().execute(
-            "INSERT INTO users (user_id,%s) VALUES (%d,%s)" %
+            'INSERT INTO users (user_id,username,%s) VALUES (%d,"%s",%s)' %
             (",".join(key for key, value in user_fields.items()), user_id,
-             ",".join('"' + str(value) + '"'
-                      for key, value in user_fields.items())))
+             username, ",".join('"' + str(value) + '"'
+                                for key, value in user_fields.items())))
 
         skills_formated = {}
         skills_list = get_answers('skill')
@@ -85,9 +88,10 @@ def save_user(user_id, fields):
         print('user created')
     else:
         create_connection().cursor().execute(
-            "UPDATE users SET %s WHERE user_id=%d" %
-            (",".join(key + '="' + str(value) + '"'
-                      for key, value in user_fields.items()), user_id))
+            'UPDATE users SET username="%s",%s WHERE user_id=%d' %
+            (username, ",".join(
+                key + '="' + str(value) + '"'
+                for key, value in user_fields.items()), user_id))
 
         skills_formated = {}
         skills_list = get_answers('skill')
@@ -107,9 +111,83 @@ def save_user(user_id, fields):
 
 
 def get_user(user_id):
-    return create_connection().cursor().execute(
-        "SELECT * FROM users WHERE user_id=%d" % user_id).fetchone()
+    fields = {}
+    cursor = create_connection().cursor()
+    values = list(
+        cursor.execute("SELECT * FROM users WHERE user_id=%d" %
+                       user_id).fetchone())
+    cols = cursor.execute(
+        "SELECT name FROM PRAGMA_TABLE_INFO('users')").fetchall()
+    skills = get_skills(user_id)
 
+    if values == None:
+        return None
+
+    for key, value in enumerate(values):
+        fields[cols[key][0]] = value
+
+    # return ({**fields, **skills})
+    return fields
+
+
+def get_users_by_params(params):
+    cursor = create_connection().cursor()
+    ids = list(
+        cursor.execute(
+            "SELECT user_id FROM users WHERE %s" %
+            " AND ".join(param + '="' + str(value) + '"'
+                         for param, value in params.items())).fetchall())
+
+    ids = [el[0] for el in ids]
+
+    return ids
+
+
+def get_users_by_skills(raw_skills):
+    cursor = create_connection().cursor()
+    query = []
+    user_skills = {
+        "need_help": raw_skills["can_help"],
+        "can_help": raw_skills["need_help"]
+    }
+
+    for type, skills in user_skills.items():
+        for skill in skills:
+            query.append('(skill_id="%d" AND %s="1")' % (skill, type))
+
+    ids = list(
+        cursor.execute("SELECT user_id FROM user_skill WHERE %s" %
+                       " OR ".join(param for param in query)).fetchall())
+
+    print("SELECT user_id FROM user_skill WHERE %s" %
+          " OR ".join(param for param in query))
+
+    ids = [el[0] for el in ids]
+
+    return ids
+
+
+def get_skills(user_id):
+    skills = {"need_help": [], "can_help": []}
+    rows = create_connection().cursor().execute(
+        "SELECT skill_id,need_help,can_help FROM user_skill WHERE user_id=%d" %
+        user_id).fetchall()
+
+    for row in rows:
+        if row[1]:
+            skills["need_help"].append(row[0])
+        if row[2]:
+            skills["can_help"].append(row[0])
+
+    return skills
+
+
+def get_next(user_id):
+    print(user_id)
+
+
+# print(get_users_by_params({"relationship_goal": 1, "current_work_scope": 7}))
+print(get_users_by_skills({"need_help": [1, 2], "can_help": [6]}))
 
 # def get_user(id):
 #     return create_connection().cursor().execute("SELECT * FROM user WHERE user_id=%d" % id).fetchone()

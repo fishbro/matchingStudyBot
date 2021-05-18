@@ -271,41 +271,12 @@ if __name__ == "__main__":
         query.answer()
 
         end_text = "*Спасибо за заполнение анкеты, ваша анкета:*"
-        for code, field in user_data[user['id']].items():
-            if code == 'name':
-                end_text += '\n\n*Ваше имя:* ' + field
-            elif code == 'phone_number':
-                end_text += '\n\n*Ваш телефон:* ' + field
-            elif code == 'relationship_goal':
-                end_text += '\n\n*Ты ищешь:* ' + ','.join(
-                    answer[1] for answer in answers_data['relationship_goal']
-                    if str(answer[0]) == field)
-            elif code == 'current_work_scope':
-                end_text += '\n\n*Ты работаешь в сфере:* ' + ','.join(
-                    answer[1] for answer in answers_data['work_scope']
-                    if str(answer[0]) == field)
-            elif code == 'current_profession_and_position':
-                end_text += '\n\n*Твоя текущая профессия и должность:* ' + field
-            elif code == 'next_work_scope':
-                end_text += '\n\n*Хочешь работать в сфере:* ' + ','.join(
-                    answer[1] for answer in answers_data['work_scope']
-                    if str(answer[0]) == field)
-            elif code == 'next_profession_and_position':
-                end_text += '\n\n*Желаемая профессия и должность:* ' + field
-            elif code == 'can_help':
-                end_text += '\n\n*Можешь помочь с:* ' + '\n'.join(
-                    answer[1] for answer in answers_data['skill']
-                    if str(answer[0]) in field)
-            elif code == 'need_help':
-                end_text += '\n\n*Ищешь помощи в:* ' + '\n'.join(
-                    answer[2] for answer in answers_data['skill']
-                    if str(answer[0]) in field)
-
-        end_text = "\n\n*Для просмотре подобранных пользователей воспользуйтесь коммандой –* /next"
+        end_text += get_questionnaire(user_data[user['id']])
+        end_text += "\n\n*Для просмотре подобранных пользователей воспользуйтесь коммандой –* /next"
 
         query.message.reply_text(end_text, parse_mode='Markdown')
 
-        save_user(user['id'], user_data[user['id']])
+        save_user(user, user_data[user['id']])
         user_data.pop(user['id'], None)
 
         return ConversationHandler.END
@@ -318,10 +289,63 @@ if __name__ == "__main__":
 
         return ConversationHandler.END
 
+    def next(update: Update, _: CallbackContext):
+        user = update.message.from_user
+
+        print('next')
+        print(user)
+
+    def select(update: Update, _: CallbackContext):
+        user = update.message.from_user
+
+        print('select')
+
+    def confirm(update: Update, _: CallbackContext):
+        user = update.message.from_user
+
+        print('confirm')
+
+    def get_questionnaire(data):
+        text = ''
+        for code, field in data.items():
+            if code == 'name':
+                text += '\n\n*Имя:* ' + field
+            elif code == 'phone_number':
+                text += '\n\n*Телефон:* ' + field
+            elif code == 'relationship_goal':
+                text += '\n\n*В поиске:* ' + ','.join(
+                    answer[1] for answer in answers_data['relationship_goal']
+                    if str(answer[0]) == field)
+            elif code == 'current_work_scope':
+                text += '\n\n*Работа в сфере:* ' + ','.join(
+                    answer[1] for answer in answers_data['work_scope']
+                    if str(answer[0]) == field)
+            elif code == 'current_profession_and_position':
+                text += '\n\n*Текущая профессия и должность:* ' + field
+            elif code == 'next_work_scope':
+                text += '\n\n*Желаемая сфера:* ' + ','.join(
+                    answer[1] for answer in answers_data['work_scope']
+                    if str(answer[0]) == field)
+            elif code == 'next_profession_and_position':
+                text += '\n\n*Желаемая профессия и должность:* ' + field
+            elif code == 'can_help':
+                text += '\n\n*Может помочь с:* ' + '\n'.join(
+                    answer[1] for answer in answers_data['skill']
+                    if str(answer[0]) in field)
+            elif code == 'need_help':
+                text += '\n\n*Нуждается в помощи с:* ' + '\n'.join(
+                    answer[2] for answer in answers_data['skill']
+                    if str(answer[0]) in field)
+
+        return text
+
     dispatches = [
         # CommandHandler("start", start),
         # CommandHandler("stop", stop),
         # CallbackQueryHandler(button),
+        CommandHandler("next", next),
+        CommandHandler("select", next),
+        CommandHandler("confirm", next),
         ConversationHandler(
             entry_points=[
                 CommandHandler('start', start),
