@@ -24,24 +24,22 @@ if __name__ == "__main__":
         update.message.reply_text('Напишите свое имя')
         # print(update.message)
 
-        return PHONE
-
-    def phone(update: Update, _: CallbackContext):
-        user = update.message.from_user
-        user_data[user["id"]] = {}
-        user_data[user["id"]]["name"] = update.message.text
-
-        update.message.reply_text('Напишите свой телефон')
-
         return RELATIONSHIP
+
+    # def phone(update: Update, _: CallbackContext):
+    #     user = update.message.from_user
+    #     user_data[user["id"]] = {}
+    #     user_data[user["id"]]["name"] = update.message.text
+
+    #     update.message.reply_text('Напишите свой телефон')
+
+    #     return RELATIONSHIP
 
     def relationship(update: Update, _: CallbackContext):
         user = update.message.from_user
-        user_data[user["id"]]["phone_number"] = update.message.text
-
-        # if answers_data.get('relationship_goal') is None:
-        #     answers_data['relationship_goal'] = get_answers(
-        #         'relationship_goal')
+        user_data[user["id"]] = {}
+        user_data[user["id"]]["name"] = update.message.text
+        # user_data[user["id"]]["phone_number"] = update.message.text
 
         reply_keyboard = [[
             InlineKeyboardButton(key[1],
@@ -63,9 +61,6 @@ if __name__ == "__main__":
 
         user_data[user["id"]]["relationship_goal"] = data[1]
         query.answer()
-
-        # if answers_data.get('work_scope') is None:
-        #     answers_data['work_scope'] = get_answers('work_scope')
 
         reply_keyboard = [[
             InlineKeyboardButton(key[0],
@@ -101,9 +96,6 @@ if __name__ == "__main__":
         user_data[user["id"]][
             "current_profession_and_position"] = update.message.text
 
-        # if answers_data.get('work_scope') is None:
-        #     answers_data['work_scope'] = get_answers('work_scope')
-
         reply_keyboard = [[
             InlineKeyboardButton(key[0],
                                  callback_data='work_scope,' + str(key[0]))
@@ -136,9 +128,6 @@ if __name__ == "__main__":
         user = update.message.from_user
         user_data[
             user["id"]]["next_profession_and_position"] = update.message.text
-
-        # if answers_data.get('skill') is None:
-        #     answers_data['skill'] = get_answers('skill')
 
         reply_keyboard = [[
             InlineKeyboardButton(key[0], callback_data='skill,' + str(key[0]))
@@ -202,9 +191,6 @@ if __name__ == "__main__":
         user = query.from_user
         data = query.data.split(',')
         query.answer()
-
-        # if answers_data.get('skill') is None:
-        #     answers_data['skill'] = get_answers('skill')
 
         reply_keyboard = [[
             InlineKeyboardButton(key[0], callback_data='skill,' + str(key[0]))
@@ -303,8 +289,7 @@ if __name__ == "__main__":
                 InlineKeyboardButton("Выбрать",
                                      callback_data='select_' +
                                      str(user_fields["user_id"])),
-                InlineKeyboardButton("Следующий",
-                                     callback_data='next_' + str(user['id']))
+                # InlineKeyboardButton("Следующий", callback_data='next')
             ]]
             update.message.reply_text(end_text,
                                       reply_markup=InlineKeyboardMarkup(
@@ -314,6 +299,12 @@ if __name__ == "__main__":
         else:
             end_text = "*Подходящий пользователь не найден, попробуйте позже.*"
             update.message.reply_text(end_text, parse_mode='Markdown')
+
+    def next_btn(update: Update, _: CallbackContext):
+        query = update.callback_query
+        user = query.from_user
+
+        # print('next_btn', query, user)
 
     def select(update: Update, _: CallbackContext):
         user = update.message.from_user
@@ -366,14 +357,15 @@ if __name__ == "__main__":
         CommandHandler("next", next),
         CommandHandler("select", next),
         CommandHandler("confirm", next),
+        CallbackQueryHandler(next_btn, pattern='^next$'),
         ConversationHandler(
             entry_points=[
                 CommandHandler('start', start),
                 CommandHandler('renew', start)
             ],
             states={
-                PHONE:
-                [MessageHandler(Filters.text & ~Filters.command, phone)],
+                # PHONE:
+                # [MessageHandler(Filters.text & ~Filters.command, phone)],
                 RELATIONSHIP: [
                     MessageHandler(Filters.text & ~Filters.command,
                                    relationship)

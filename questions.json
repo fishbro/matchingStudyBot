@@ -6,11 +6,6 @@
       "type": "text"
     },
     {
-      "id": "phone_number",
-      "text": "Напишите свой телефон",
-      "type": "text"
-    },
-    {
       "id": "current_profession_and_position",
       "text": "Введите вашу текущую профессию и должность",
       "type": "text"
