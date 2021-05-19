@@ -113,17 +113,16 @@ def save_user(user_raw, fields):
 def get_user(user_id):
     fields = {}
     cursor = create_connection().cursor()
-    values = list(
-        cursor.execute("SELECT * FROM users WHERE user_id=%d" %
-                       user_id).fetchone())
-    cols = cursor.execute(
-        "SELECT name FROM PRAGMA_TABLE_INFO('users')").fetchall()
-    skills = get_skills(user_id)
-
-    if values == None:
+    raw_values = cursor.execute("SELECT * FROM users WHERE user_id=%d" %
+                                user_id).fetchone()
+    if raw_values == None:
         return None
 
-    for key, value in enumerate(values):
+    cols = cursor.execute(
+        "SELECT name FROM PRAGMA_TABLE_INFO('users')").fetchall()
+    # skills = get_skills(user_id)
+
+    for key, value in enumerate(list(raw_values)):
         fields[cols[key][0]] = value
 
     # return ({**fields, **skills})
@@ -132,13 +131,16 @@ def get_user(user_id):
 
 def get_users_by_params(params):
     cursor = create_connection().cursor()
-    ids = list(
+    ids_raw = list(
         cursor.execute(
             "SELECT user_id FROM users WHERE %s" %
             " AND ".join(param + '="' + str(value) + '"'
                          for param, value in params.items())).fetchall())
 
-    ids = [el[0] for el in ids]
+    if ids_raw == None:
+        return []
+
+    ids = [el[0] for el in ids_raw]
 
     return ids
 
@@ -155,16 +157,20 @@ def get_users_by_skills(raw_skills):
         for skill in skills:
             query.append('(skill_id="%d" AND %s="1")' % (skill, type))
 
-    ids = list(
-        cursor.execute("SELECT user_id FROM user_skill WHERE %s" %
-                       " OR ".join(param for param in query)).fetchall())
+    ids_raw = cursor.execute("SELECT user_id FROM user_skill WHERE %s" %
+                             " OR ".join(param for param in query)).fetchall()
 
-    print("SELECT user_id FROM user_skill WHERE %s" %
-          " OR ".join(param for param in query))
+    if ids_raw == None:
+        return {}
 
-    ids = [el[0] for el in ids]
+    ids_w = {}
+    for el in list(ids_raw):
+        if el[0] in ids_w:
+            ids_w[el[0]] = ids_w[el[0]] + 1
+        else:
+            ids_w[el[0]] = 1
 
-    return ids
+    return ids_w
 
 
 def get_skills(user_id):
@@ -182,95 +188,58 @@ def get_skills(user_id):
     return skills
 
 
+def shown_add(user_id, shown_id):
+    create_connection().cursor().execute(
+        'INSERT INTO shown (user_id,shown_id) VALUES (%d,%d)' %
+        (user_id, shown_id))
+
+
+def shown_check(user_id, shown_id):
+    rows = create_connection().cursor().execute(
+        "SELECT * FROM shown WHERE user_id=%d AND shown_id=%d" %
+        (user_id, shown_id)).fetchall()
+
+    return True if rows != None and len(
+        rows) > 0 else False  #true if already shown
+
+
+def shown_remove(shown_id):
+    create_connection().cursor().execute(
+        'DELETE FROM shown WHERE shown_id=%d' % shown_id)
+
+
 def get_next(user_id):
-    print(user_id)
+    user_params = get_user(user_id)
+    user_skills = get_skills(user_id)
+    if user_params["relationship_goal"] == 1:
+        next_params = {
+            "relationship_goal": user_params["relationship_goal"],
+            "current_work_scope": user_params["next_work_scope"],
+            "next_work_scope": user_params["current_work_scope"],
+        }
+    else:
+        next_params = {
+            "relationship_goal": user_params["relationship_goal"],
+            "next_work_scope": user_params["next_work_scope"],
+        }
 
+    users_by_params = get_users_by_params(next_params)
+    match_users = {
+        id: count
+        for id, count in get_users_by_skills(user_skills).items()
+        if id != user_id and id in users_by_params
+        and not shown_check(user_id, id)
+    }
 
-# print(get_users_by_params({"relationship_goal": 1, "current_work_scope": 7}))
-print(get_users_by_skills({"need_help": [1, 2], "can_help": [6]}))
+    match_users_sorted = [
+        k for k in sorted(match_users, key=match_users.get, reverse=True)
+    ]
 
-# def get_user(id):
-#     return create_connection().cursor().execute("SELECT * FROM user WHERE user_id=%d" % id).fetchone()
+    if len(match_users_sorted) > 0:
+        shown_add(user_id, match_users_sorted[0])
+        return match_users_sorted[0]
+    else:
+        return None
 
-# def get_chat(id):
-#     return create_connection().cursor().execute("SELECT * FROM chat WHERE chat_id=%d" % id).fetchone()
-
-# def get_user_chat(user_id, chat_id):
-#     return (
-#         create_connection()
-#         .cursor()
-#         .execute("SELECT * FROM user_chat WHERE user_id=%d AND chat_id=%d" % (user_id, chat_id))
-#         .fetchone()
-#     )
-
-# def get_user_fields(id, fields: list):
-#     raw = (
-#         create_connection().cursor().execute("SELECT %s FROM user WHERE user_id=%d" % (",".join(fields), id)).fetchone()
-#     )
-#     result = {}
-#     for i in range(len(fields)):
-#         result[fields[i]] = raw[i]
-#     return result
-
-# def get_user_chat_fields(user_id, chat_id, fields: list):
-#     raw = (
-#         create_connection()
-#         .cursor()
-#         .execute("SELECT %s FROM user_chat WHERE user_id=%d AND chat_id=%d" % (",".join(fields), user_id, chat_id))
-#         .fetchone()
-#     )
-#     result = {}
-#     for i in range(len(fields)):
-#         result[fields[i]] = raw[i]
-#     return result
-
-# def create_user(fields: dict):
-#     keys = list(fields)
-#     return (
-#         create_connection()
-#         .cursor()
-#         .execute(
-#             "INSERT INTO user (%s) VALUES (%s)"
-#             % (
-#                 ",".join(field_name for field_name in keys),
-#                 ",".join(_create_string(fields[field_name]) for field_name in keys),
-#             )
-#         )
-#     )
-
-# def create_chat(fields: dict):
-#     keys = list(fields)
-#     return (
-#         create_connection()
-#         .cursor()
-#         .execute(
-#             "INSERT INTO chat (%s) VALUES (%s)"
-#             % (
-#                 ",".join(field_name for field_name in keys),
-#                 ",".join(_create_string(fields[field_name]) for field_name in keys),
-#             )
-#         )
-#     )
-
-# def create_user_chat(fields: dict):
-#     keys = list(fields)
-#     return (
-#         create_connection()
-#         .cursor()
-#         .execute(
-#             "INSERT INTO user_chat (%s) VALUES (%s)"
-#             % (
-#                 ",".join(field_name for field_name in keys),
-#                 ",".join(_create_string(fields[field_name]) for field_name in keys),
-#             )
-#         )
-#     )
-
-# def modify_score(user_id, chat_id, score):
-#     return (
-#         create_connection()
-#         .cursor()
-#         .execute("UPDATE user_chat SET score=%d WHERE user_id=%d AND chat_id=%d" % (score, user_id, chat_id))
-#     )
 
 initialize_database()
