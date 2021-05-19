@@ -228,7 +228,7 @@ def get_next(user_id):
         id: count
         for id, count in get_users_by_skills(user_skills).items()
         if id != user_id and id in users_by_params
-        and not shown_check(user_id, id)
+        #and not shown_check(user_id, id)
     }
 
     match_users_sorted = [
@@ -236,7 +236,7 @@ def get_next(user_id):
     ]
 
     if len(match_users_sorted) > 0:
-        shown_add(user_id, match_users_sorted[0])
+        # shown_add(user_id, match_users_sorted[0])
         return match_users_sorted[0]
     else:
         return None

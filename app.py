@@ -3,7 +3,7 @@ import logging
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton, Update
 from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHandler, Filters, CallbackContext, CallbackQueryHandler
 # from config import questions, answers
-from database import get_answers, save_user
+from database import get_answers, save_user, get_user, get_skills, get_next
 
 import config
 # from dispatches import dispatches
@@ -12,8 +12,8 @@ if __name__ == "__main__":
     logging.getLogger().setLevel(logging.INFO)
     updater = Updater(config.api_token)
 
-    answers_data = {}
-    answers_map = {}
+    answers_map = ['relationship_goal', 'work_scope', 'skill']
+    answers_data = {ans: get_answers(ans) for ans in answers_map}
 
     PHONE, SUMMARY, RELATIONSHIP, CUR_WORK, CUR_PROFESSION, NEXT_WORK, NEXT_PROFESSION, CAN_HELP, CAN_HELP_CHECK, NEED_HELP, NEED_HELP_CHECK = range(
         11)
@@ -39,9 +39,9 @@ if __name__ == "__main__":
         user = update.message.from_user
         user_data[user["id"]]["phone_number"] = update.message.text
 
-        if answers_data.get('relationship_goal') is None:
-            answers_data['relationship_goal'] = get_answers(
-                'relationship_goal')
+        # if answers_data.get('relationship_goal') is None:
+        #     answers_data['relationship_goal'] = get_answers(
+        #         'relationship_goal')
 
         reply_keyboard = [[
             InlineKeyboardButton(key[1],
@@ -64,8 +64,8 @@ if __name__ == "__main__":
         user_data[user["id"]]["relationship_goal"] = data[1]
         query.answer()
 
-        if answers_data.get('work_scope') is None:
-            answers_data['work_scope'] = get_answers('work_scope')
+        # if answers_data.get('work_scope') is None:
+        #     answers_data['work_scope'] = get_answers('work_scope')
 
         reply_keyboard = [[
             InlineKeyboardButton(key[0],
@@ -101,8 +101,8 @@ if __name__ == "__main__":
         user_data[user["id"]][
             "current_profession_and_position"] = update.message.text
 
-        if answers_data.get('work_scope') is None:
-            answers_data['work_scope'] = get_answers('work_scope')
+        # if answers_data.get('work_scope') is None:
+        #     answers_data['work_scope'] = get_answers('work_scope')
 
         reply_keyboard = [[
             InlineKeyboardButton(key[0],
@@ -137,8 +137,8 @@ if __name__ == "__main__":
         user_data[
             user["id"]]["next_profession_and_position"] = update.message.text
 
-        if answers_data.get('skill') is None:
-            answers_data['skill'] = get_answers('skill')
+        # if answers_data.get('skill') is None:
+        #     answers_data['skill'] = get_answers('skill')
 
         reply_keyboard = [[
             InlineKeyboardButton(key[0], callback_data='skill,' + str(key[0]))
@@ -203,8 +203,8 @@ if __name__ == "__main__":
         data = query.data.split(',')
         query.answer()
 
-        if answers_data.get('skill') is None:
-            answers_data['skill'] = get_answers('skill')
+        # if answers_data.get('skill') is None:
+        #     answers_data['skill'] = get_answers('skill')
 
         reply_keyboard = [[
             InlineKeyboardButton(key[0], callback_data='skill,' + str(key[0]))
@@ -292,8 +292,28 @@ if __name__ == "__main__":
     def next(update: Update, _: CallbackContext):
         user = update.message.from_user
 
-        print('next')
-        print(user)
+        match_id = get_next(user['id'])
+        if match_id != None:
+            user_fields = get_user(match_id)
+            user_skills = get_skills(match_id)
+            end_text = "*Анкета подходящего пользователя:*"
+            end_text += get_questionnaire({**user_fields, **user_skills})
+
+            reply_keyboard = [[
+                InlineKeyboardButton("Выбрать",
+                                     callback_data='select_' +
+                                     str(user_fields["user_id"])),
+                InlineKeyboardButton("Следующий",
+                                     callback_data='next_' + str(user['id']))
+            ]]
+            update.message.reply_text(end_text,
+                                      reply_markup=InlineKeyboardMarkup(
+                                          reply_keyboard,
+                                          one_time_keyboard=True),
+                                      parse_mode='Markdown')
+        else:
+            end_text = "*Подходящий пользователь не найден, попробуйте позже.*"
+            update.message.reply_text(end_text, parse_mode='Markdown')
 
     def select(update: Update, _: CallbackContext):
         user = update.message.from_user
@@ -315,27 +335,27 @@ if __name__ == "__main__":
             elif code == 'relationship_goal':
                 text += '\n\n*В поиске:* ' + ','.join(
                     answer[1] for answer in answers_data['relationship_goal']
-                    if str(answer[0]) == field)
+                    if str(answer[0]) == str(field))
             elif code == 'current_work_scope':
                 text += '\n\n*Работа в сфере:* ' + ','.join(
                     answer[1] for answer in answers_data['work_scope']
-                    if str(answer[0]) == field)
+                    if str(answer[0]) == str(field))
             elif code == 'current_profession_and_position':
                 text += '\n\n*Текущая профессия и должность:* ' + field
             elif code == 'next_work_scope':
                 text += '\n\n*Желаемая сфера:* ' + ','.join(
                     answer[1] for answer in answers_data['work_scope']
-                    if str(answer[0]) == field)
+                    if str(answer[0]) == str(field))
             elif code == 'next_profession_and_position':
                 text += '\n\n*Желаемая профессия и должность:* ' + field
             elif code == 'can_help':
                 text += '\n\n*Может помочь с:* ' + '\n'.join(
                     answer[1] for answer in answers_data['skill']
-                    if str(answer[0]) in field)
+                    if str(answer[0]) in str(field))
             elif code == 'need_help':
                 text += '\n\n*Нуждается в помощи с:* ' + '\n'.join(
                     answer[2] for answer in answers_data['skill']
-                    if str(answer[0]) in field)
+                    if str(answer[0]) in str(field))
 
         return text
 
