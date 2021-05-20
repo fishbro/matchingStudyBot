@@ -3,7 +3,7 @@ import logging
 from telegram import InlineKeyboardMarkup, InlineKeyboardButton, Update
 from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHandler, Filters, CallbackContext, CallbackQueryHandler
 # from config import questions, answers
-from database import get_answers, save_user, get_user, get_skills, get_next
+from database import approve_complete, approve_create, get_answers, save_user, get_user, get_skills, get_next
 
 import config
 # from dispatches import dispatches
@@ -279,7 +279,10 @@ if __name__ == "__main__":
         user = update.message.from_user
 
         match_id = get_next(user['id'])
-        if match_id != None:
+        if match_id == "user_err":
+            end_text = "*Ваша анкета не найдена, вы можете создать ее отправив комманду* – /start"
+            update.message.reply_text(end_text, parse_mode='Markdown')
+        elif match_id != None:
             user_fields = get_user(match_id)
             user_skills = get_skills(match_id)
             end_text = "*Анкета подходящего пользователя:*"
@@ -300,21 +303,49 @@ if __name__ == "__main__":
             end_text = "*Подходящий пользователь не найден, попробуйте позже.*"
             update.message.reply_text(end_text, parse_mode='Markdown')
 
-    def next_btn(update: Update, _: CallbackContext):
+    def select(update: Update, _: CallbackContext):
         query = update.callback_query
         user = query.from_user
+        user_fields = get_user(user.id)
+        user_skills = get_skills(user.id)
+        end_text = "*С вами хочет пообщаться пользователь, вот его анкета:*"
+        end_text += get_questionnaire({**user_fields, **user_skills})
 
-        # print('next_btn', query, user)
+        reply_keyboard = [[
+            InlineKeyboardButton("Отменить",
+                                 callback_data='decline_' + str(user.id)),
+            InlineKeyboardButton("Подтвердить!",
+                                 callback_data='confirm_' + str(user.id))
+        ]]
 
-    def select(update: Update, _: CallbackContext):
-        user = update.message.from_user
+        to_user = query.data.split('_')[1]
+        approve_create(user.id, to_user)
 
-        print('select')
+        updater.bot.send_message(user.id,
+                                 "Ваша анкета отправлена пользователю")
+        updater.bot.send_message(to_user,
+                                 end_text,
+                                 reply_markup=InlineKeyboardMarkup(
+                                     reply_keyboard, one_time_keyboard=True),
+                                 parse_mode='Markdown')
 
     def confirm(update: Update, _: CallbackContext):
-        user = update.message.from_user
+        query = update.callback_query
+        user = query.from_user
+        to_user = query.data.split('_')[1]
 
-        print('confirm')
+        approve_complete(to_user, user.id)
+        updater.bot.send_message(
+            to_user, "Пользователь @" + user.username +
+            " одобрил ваш запрос, напишите ему!")
+
+    def decline(update: Update, _: CallbackContext):
+        query = update.callback_query
+
+        updater.bot.edit_message_text("Вы отклонили запрос пользователя",
+                                      parse_mode='Markdown',
+                                      chat_id=query.message.chat.id,
+                                      message_id=query.message.message_id)
 
     def get_questionnaire(data):
         text = ''
@@ -351,13 +382,12 @@ if __name__ == "__main__":
         return text
 
     dispatches = [
-        # CommandHandler("start", start),
-        # CommandHandler("stop", stop),
-        # CallbackQueryHandler(button),
         CommandHandler("next", next),
         CommandHandler("select", next),
         CommandHandler("confirm", next),
-        CallbackQueryHandler(next_btn, pattern='^next$'),
+        CallbackQueryHandler(select, pattern='^select_(.*)$'),
+        CallbackQueryHandler(confirm, pattern='^confirm_(.*)$'),
+        CallbackQueryHandler(decline, pattern='^decline_(.*)$'),
         ConversationHandler(
             entry_points=[
                 CommandHandler('start', start),

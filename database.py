@@ -210,6 +210,8 @@ def shown_remove(shown_id):
 
 def get_next(user_id):
     user_params = get_user(user_id)
+    if user_params == None:
+        return 'user_err'
     user_skills = get_skills(user_id)
     if user_params["relationship_goal"] == 1:
         next_params = {
@@ -240,6 +242,18 @@ def get_next(user_id):
         return match_users_sorted[0]
     else:
         return None
+
+
+def approve_create(user_id, confirming_id):
+    create_connection().cursor().execute(
+        'INSERT INTO approve (user_id,confirming_id,is_confirmed) VALUES (%s,%s,%s)'
+        % (user_id, confirming_id, 0))
+
+
+def approve_complete(user_id, confirming_id):
+    create_connection().cursor().execute(
+        'UPDATE approve SET is_confirmed=1 WHERE user_id=%s AND confirming_id=%s'
+        % (user_id, confirming_id))
 
 
 initialize_database()
